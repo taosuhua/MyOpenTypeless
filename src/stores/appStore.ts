@@ -3,6 +3,7 @@ import { create } from 'zustand'
 export type PipelineState = 'idle' | 'recording' | 'transcribing' | 'polishing' | 'outputting'
 
 export type SttProvider =
+  | 'local-whisper'
   | 'deepgram'
   | 'assemblyai'
   | 'glm-asr'

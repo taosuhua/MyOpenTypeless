@@ -1,0 +1,8 @@
+model_options:
+  device: cuda
+  compute_type: int8_float16
+
+models:
+  - name: whisper-1
+    path: medium
+    batch_size: 1

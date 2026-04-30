@@ -359,8 +359,8 @@ impl PipelineHandle {
             config_data.stt_language
         );
 
-        // Guard: empty API key — bail before starting audio (skip for cloud provider)
-        if config_data.stt_api_key.is_empty() && config_data.stt_provider != "cloud" {
+        // Guard: empty API key — bail before starting audio (skip for cloud/local-whisper provider)
+        if config_data.stt_api_key.is_empty() && config_data.stt_provider != "cloud" && config_data.stt_provider != "local-whisper" {
             let _ = self.app_handle.emit(
                 "pipeline:error",
                 "STT API key is not configured. Please set it in Settings → Speech Recognition.",
@@ -935,6 +935,7 @@ impl PipelineHandle {
             "openai-whisper" => "https://api.openai.com/v1/audio/transcriptions".to_string(),
             "groq-whisper" => "https://api.groq.com/openai/v1/audio/transcriptions".to_string(),
             "siliconflow" => "https://api.siliconflow.cn/v1/audio/transcriptions".to_string(),
+            "local-whisper" => "http://127.0.0.1:8800/v1/audio/transcriptions".to_string(),
             "deepgram" => "https://api.deepgram.com/v1/listen".to_string(),
             "assemblyai" => "https://api.assemblyai.com/v2/transcript".to_string(),
             _ => {

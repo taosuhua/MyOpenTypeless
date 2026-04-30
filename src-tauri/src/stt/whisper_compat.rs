@@ -10,6 +10,8 @@ pub struct WhisperCompatConfig {
     pub model: &'static str,
     /// Extra form text fields (e.g. GLM-ASR needs "stream"="false").
     pub extra_fields: &'static [(&'static str, &'static str)],
+    /// If true, skip API key validation and don't send Authorization header (for local servers).
+    pub skip_auth: bool,
 }
 
 /// Max audio buffer: ~24 MB PCM ≈ 12.5 min at 16kHz 16-bit mono.
@@ -44,6 +46,11 @@ impl WhisperCompatProvider {
         }
     }
 
+    /// Whether this provider requires an API key.
+    pub fn requires_api_key(&self) -> bool {
+        !self.provider_config.skip_auth
+    }
+
     /// Build a WAV file from raw PCM 16-bit mono audio. Public so test helpers can reuse it.
     pub fn build_wav(pcm: &[u8], sample_rate: u32) -> Vec<u8> {
         let data_len = pcm.len() as u32;
@@ -75,7 +82,7 @@ impl WhisperCompatProvider {
 #[async_trait]
 impl SttProvider for WhisperCompatProvider {
     async fn connect(&mut self, config: &SttConfig) -> Result<()> {
-        if config.api_key.is_empty() {
+        if !self.provider_config.skip_auth && config.api_key.is_empty() {
             anyhow::bail!("{} API key is empty", self.provider_config.provider_name);
         }
         self.stt_config = Some(config.clone());
@@ -146,10 +153,11 @@ impl SttProvider for WhisperCompatProvider {
             form = form.text(key.to_string(), value.to_string());
         }
 
-        let resp = self
-            .client
-            .post(self.provider_config.endpoint)
-            .header("Authorization", format!("Bearer {}", config.api_key))
+        let mut req = self.client.post(self.provider_config.endpoint);
+        if !self.provider_config.skip_auth {
+            req = req.header("Authorization", format!("Bearer {}", config.api_key));
+        }
+        let resp = req
             .multipart(form)
             .timeout(std::time::Duration::from_secs(60))
             .send()

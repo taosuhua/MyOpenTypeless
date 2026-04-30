@@ -1,0 +1,8 @@
+model_options:
+  device: cpu
+  compute_type: int8
+
+models:
+  - name: medium
+    path: medium
+    batch_size: 1

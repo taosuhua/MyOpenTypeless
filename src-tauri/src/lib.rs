@@ -25,6 +25,307 @@ pub fn api_base_url() -> String {
     std::env::var("API_BASE_URL").unwrap_or_else(|_| DEFAULT_API_BASE_URL.to_string())
 }
 
+/// Spawn the local Faster Whisper Server in the background if it's not already running.
+async fn spawn_local_whisper_server() {
+    let health_url = "http://127.0.0.1:8800/health";
+    // Check if already running
+    if let Ok(resp) = reqwest::Client::new()
+        .get(health_url)
+        .timeout(std::time::Duration::from_secs(2))
+        .send()
+        .await
+    {
+        if resp.status().is_success() {
+            tracing::info!("Local Whisper Server already running, skipping spawn");
+            return;
+        }
+    }
+
+    tracing::info!("Starting local Faster Whisper Server ...");
+
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        // CREATE_NO_WINDOW = 0x08000000
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+
+        // Find Python executable
+        let python_path = find_python_on_windows();
+        if python_path.is_none() {
+            tracing::error!("Python not found. Please install Python 3.11+ and faster-whisper-server");
+            return;
+        }
+        let python_path = python_path.unwrap();
+        tracing::info!("Using Python: {}", python_path);
+
+        // Build environment with current env + CUDA paths
+        let mut env: std::collections::HashMap<String, String> = std::env::vars().collect();
+
+        // Find and add CUDA paths to PATH
+        if let Some(cuda_paths) = find_cuda_paths_on_windows() {
+            if let Some(path) = env.get("PATH") {
+                let mut new_path = path.clone();
+                for cuda_dir in &cuda_paths {
+                    if !path.contains(cuda_dir) {
+                        new_path.push(';');
+                        new_path.push_str(cuda_dir);
+                    }
+                }
+                env.insert("PATH".to_string(), new_path);
+                tracing::info!("Added CUDA paths to PATH");
+            }
+        }
+
+        // Create GPU config file if CUDA is available
+        let config_path = create_whisper_gpu_config();
+
+        let mut args = vec![
+            "-m",
+            "faster_whisper_server",
+            "--host",
+            "127.0.0.1",
+            "--port",
+            "8800",
+        ];
+
+        // Use config file if CUDA available, otherwise use simple model arg
+        if let Some(config) = &config_path {
+            args.push("--config");
+            args.push(config);
+        } else {
+            args.push("whisper-1");
+        }
+
+        let result = std::process::Command::new(&python_path)
+            .args(&args)
+            .envs(&env)
+            .creation_flags(CREATE_NO_WINDOW)
+            .spawn();
+
+        match result {
+            Ok(child) => {
+                tracing::info!(
+                    "Local Whisper Server spawned (background, pid={})",
+                    child.id()
+                );
+                // Wait for server to be ready
+                for i in 1..=60 {
+                    tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+                    if let Ok(resp) = reqwest::Client::new()
+                        .get(health_url)
+                        .timeout(std::time::Duration::from_secs(2))
+                        .send()
+                        .await
+                    {
+                        if resp.status().is_success() {
+                            tracing::info!(
+                                "Local Whisper Server ready after {}s",
+                                i
+                            );
+                            return;
+                        }
+                    }
+                }
+                tracing::warn!("Local Whisper Server not ready after 60s");
+            }
+            Err(e) => tracing::error!("Failed to spawn Local Whisper Server: {}", e),
+        }
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        // On macOS/Linux, try to find python3 in PATH
+        let python_path = if std::path::Path::new("/usr/bin/python3").exists() {
+            "/usr/bin/python3"
+        } else if std::path::Path::new("/usr/local/bin/python3").exists() {
+            "/usr/local/bin/python3"
+        } else {
+            "python3"
+        };
+
+        // Create GPU config if available
+        let config_path = create_whisper_gpu_config();
+
+        let mut args = vec![
+            "-m",
+            "faster_whisper_server",
+            "--host",
+            "127.0.0.1",
+            "--port",
+            "8800",
+        ];
+
+        if let Some(config) = &config_path {
+            args.push("--config");
+            args.push(config);
+        } else {
+            args.push("whisper-1");
+        }
+
+        let result = std::process::Command::new(python_path)
+            .args(&args)
+            .spawn();
+
+        match result {
+            Ok(_) => tracing::info!("Local Whisper Server spawned (background)"),
+            Err(e) => tracing::error!("Failed to spawn Local Whisper Server: {}", e),
+        }
+    }
+}
+
+/// Find Python executable on Windows by searching common locations
+#[cfg(target_os = "windows")]
+fn find_python_on_windows() -> Option<String> {
+    // 1. Check environment variable PYTHONPATH or python in PATH
+    if let Ok(path) = std::env::var("PATH") {
+        for dir in path.split(';') {
+            let python_exe = format!("{}\\python.exe", dir);
+            if std::path::Path::new(&python_exe).exists() {
+                // Verify it can run
+                if std::process::Command::new(&python_exe)
+                    .arg("--version")
+                    .output()
+                    .is_ok()
+                {
+                    return Some(python_exe);
+                }
+            }
+        }
+    }
+
+    // 2. Check %LOCALAPPDATA%\Programs\Python\
+    if let Ok(local_app_data) = std::env::var("LOCALAPPDATA") {
+        let python_base = format!("{}\\Programs\\Python", local_app_data);
+        if let Ok(entries) = std::fs::read_dir(&python_base) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_dir() {
+                    let python_exe = format!("{}\\python.exe", path.display());
+                    if std::path::Path::new(&python_exe).exists() {
+                        return Some(python_exe);
+                    }
+                }
+            }
+        }
+    }
+
+    // 3. Check Program Files
+    let program_files_paths = [
+        "C:\\Program Files\\Python311",
+        "C:\\Program Files\\Python310",
+        "C:\\Program Files\\Python39",
+        "C:\\Program Files (x86)\\Python311",
+        "C:\\Program Files (x86)\\Python310",
+    ];
+    for dir in &program_files_paths {
+        let python_exe = format!("{}\\python.exe", dir);
+        if std::path::Path::new(&python_exe).exists() {
+            return Some(python_exe);
+        }
+    }
+
+    None
+}
+
+/// Find CUDA paths on Windows by searching CUDA installation directory
+#[cfg(target_os = "windows")]
+fn find_cuda_paths_on_windows() -> Option<Vec<String>> {
+    let cuda_base = "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA";
+    if !std::path::Path::new(cuda_base).exists() {
+        return None;
+    }
+
+    // Find the latest CUDA version directory
+    let mut versions: Vec<String> = Vec::new();
+    if let Ok(entries) = std::fs::read_dir(cuda_base) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                let name = path.file_name().unwrap().to_string_lossy();
+                if name.starts_with('v') {
+                    versions.push(path.display().to_string());
+                }
+            }
+        }
+    }
+
+    // Sort by version number (descending) to get the latest
+    versions.sort_by(|a, b| {
+        let a_ver = a.split('v').last().unwrap_or("0");
+        let b_ver = b.split('v').last().unwrap_or("0");
+        b_ver.partial_cmp(a_ver).unwrap_or(std::cmp::Ordering::Equal)
+    });
+
+    if let Some(latest) = versions.first() {
+        return Some(vec![
+            format!("{}\\bin", latest),
+            format!("{}\\libnvvp", latest),
+        ]);
+    }
+
+    None
+}
+
+/// Create GPU config file for faster-whisper-server if CUDA is available
+#[cfg(target_os = "windows")]
+fn create_whisper_gpu_config() -> Option<String> {
+    // Check if CUDA is available
+    if find_cuda_paths_on_windows().is_none() {
+        tracing::info!("No CUDA found, will use CPU mode");
+        return None;
+    }
+
+    // Create config in temp directory
+    let temp_dir = std::env::temp_dir();
+    let config_path = temp_dir.join("whisper_gpu.yaml");
+
+    let config_content = r#"model_options:
+  device: cuda
+  compute_type: int8_float16
+
+models:
+  - name: whisper-1
+    path: medium
+    batch_size: 1
+"#;
+
+    if let Err(e) = std::fs::write(&config_path, config_content) {
+        tracing::error!("Failed to write GPU config: {}", e);
+        return None;
+    }
+
+    tracing::info!("Created GPU config at {}", config_path.display());
+    Some(config_path.display().to_string())
+}
+
+#[cfg(not(target_os = "windows"))]
+fn create_whisper_gpu_config() -> Option<String> {
+    // Check for CUDA on Linux
+    #[cfg(target_os = "linux")]
+    {
+        // Check if nvidia-smi exists (indicates NVIDIA GPU)
+        if std::path::Path::new("/usr/bin/nvidia-smi").exists()
+            || std::path::Path::new("/usr/local/bin/nvidia-smi").exists()
+        {
+            let config_path = "/tmp/whisper_gpu.yaml";
+            let config_content = r#"model_options:
+  device: cuda
+  compute_type: int8_float16
+
+models:
+  - name: whisper-1
+    path: medium
+    batch_size: 1
+"#;
+            if std::fs::write(config_path, config_content).is_ok() {
+                tracing::info!("Created GPU config at {}", config_path);
+                return Some(config_path.to_string());
+            }
+        }
+    }
+    None
+}
+
 /// Cached hotkey mode to avoid loading config from disk on every keypress.
 /// Updated whenever config is saved.
 struct HotkeyModeCache(Arc<Mutex<String>>);
@@ -197,7 +498,7 @@ async fn test_stt_connection(
         return Ok(body["plan"].as_str() == Some("pro"));
     }
 
-    if api_key.is_empty() {
+    if api_key.is_empty() && provider != "local-whisper" {
         return Ok(false);
     }
 
@@ -224,29 +525,39 @@ async fn test_stt_connection(
                 .map_err(|e| e.to_string())?;
             Ok(resp.status().is_success())
         }
-        "glm-asr" | "openai-whisper" | "groq-whisper" | "siliconflow" => {
-            // All four use Whisper-compatible file upload API
-            let (endpoint, model, extra_fields): (&str, &str, &[(&str, &str)]) =
+        "glm-asr" | "openai-whisper" | "groq-whisper" | "siliconflow" | "local-whisper" => {
+            // All use Whisper-compatible file upload API
+            let (endpoint, model, extra_fields, skip_auth): (&str, &str, &[(&str, &str)], bool) =
                 match provider.as_str() {
                     "glm-asr" => (
                         "https://open.bigmodel.cn/api/paas/v4/audio/transcriptions",
                         "glm-asr-2512",
                         &[("stream", "false")][..],
+                        false,
                     ),
                     "openai-whisper" => (
                         "https://api.openai.com/v1/audio/transcriptions",
                         "whisper-1",
                         &[][..],
+                        false,
                     ),
                     "groq-whisper" => (
                         "https://api.groq.com/openai/v1/audio/transcriptions",
                         "whisper-large-v3-turbo",
                         &[][..],
+                        false,
+                    ),
+                    "local-whisper" => (
+                        "http://127.0.0.1:8800/v1/audio/transcriptions",
+                        "whisper-1",
+                        &[][..],
+                        true,
                     ),
                     _ => (
                         "https://api.siliconflow.cn/v1/audio/transcriptions",
                         "FunAudioLLM/SenseVoiceSmall",
                         &[][..],
+                        false,
                     ),
                 };
 
@@ -265,9 +576,11 @@ async fn test_stt_connection(
             }
 
             let client = reqwest::Client::new();
-            let resp = client
-                .post(endpoint)
-                .header("Authorization", format!("Bearer {}", api_key))
+            let mut req = client.post(endpoint);
+            if !skip_auth {
+                req = req.header("Authorization", format!("Bearer {}", api_key));
+            }
+            let resp = req
                 .multipart(form)
                 .timeout(std::time::Duration::from_secs(15))
                 .send()
@@ -439,7 +752,7 @@ async fn bench_stt_connection(
         return Ok(elapsed);
     }
 
-    if api_key.is_empty() {
+    if api_key.is_empty() && provider != "local-whisper" {
         return Err("API key is empty".to_string());
     }
 
@@ -476,28 +789,38 @@ async fn bench_stt_connection(
             }
             Ok(elapsed)
         }
-        "glm-asr" | "openai-whisper" | "groq-whisper" | "siliconflow" => {
-            let (endpoint, model, extra_fields): (&str, &str, &[(&str, &str)]) =
+        "glm-asr" | "openai-whisper" | "groq-whisper" | "siliconflow" | "local-whisper" => {
+            let (endpoint, model, extra_fields, skip_auth): (&str, &str, &[(&str, &str)], bool) =
                 match provider.as_str() {
                     "glm-asr" => (
                         "https://open.bigmodel.cn/api/paas/v4/audio/transcriptions",
                         "glm-asr-2512",
                         &[("stream", "false")][..],
+                        false,
                     ),
                     "openai-whisper" => (
                         "https://api.openai.com/v1/audio/transcriptions",
                         "whisper-1",
                         &[][..],
+                        false,
                     ),
                     "groq-whisper" => (
                         "https://api.groq.com/openai/v1/audio/transcriptions",
                         "whisper-large-v3-turbo",
                         &[][..],
+                        false,
+                    ),
+                    "local-whisper" => (
+                        "http://127.0.0.1:8800/v1/audio/transcriptions",
+                        "whisper-1",
+                        &[][..],
+                        true,
                     ),
                     _ => (
                         "https://api.siliconflow.cn/v1/audio/transcriptions",
                         "FunAudioLLM/SenseVoiceSmall",
                         &[][..],
+                        false,
                     ),
                 };
 
@@ -517,9 +840,11 @@ async fn bench_stt_connection(
 
             let client = reqwest::Client::new();
             let t0 = std::time::Instant::now();
-            let resp = client
-                .post(endpoint)
-                .header("Authorization", format!("Bearer {}", api_key))
+            let mut req = client.post(endpoint);
+            if !skip_auth {
+                req = req.header("Authorization", format!("Bearer {}", api_key));
+            }
+            let resp = req
                 .multipart(form)
                 .timeout(std::time::Duration::from_secs(15))
                 .send()
@@ -1086,6 +1411,11 @@ pub fn run() {
             let initial_config =
                 tauri::async_runtime::block_on(config_manager.load()).unwrap_or_default();
             let shortcut = parse_hotkey(&initial_config.hotkey).unwrap_or_else(default_shortcut);
+
+            // Auto-start Faster Whisper Server if local-whisper is the configured STT provider
+            if initial_config.stt_provider == "local-whisper" {
+                tauri::async_runtime::spawn(spawn_local_whisper_server());
+            }
 
             app.manage(config_manager);
             app.manage(history_store);

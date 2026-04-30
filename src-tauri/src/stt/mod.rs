@@ -74,30 +74,42 @@ pub fn create_provider(
             endpoint: "https://open.bigmodel.cn/api/paas/v4/audio/transcriptions",
             model: "glm-asr-2512",
             extra_fields: &[("stream", "false")],
+            skip_auth: false,
         }),
         "openai-whisper" => make(WhisperCompatConfig {
             provider_name: "OpenAI Whisper",
             endpoint: "https://api.openai.com/v1/audio/transcriptions",
             model: "whisper-1",
             extra_fields: &[],
+            skip_auth: false,
         }),
         "groq-whisper" => make(WhisperCompatConfig {
             provider_name: "Groq Whisper",
             endpoint: "https://api.groq.com/openai/v1/audio/transcriptions",
             model: "whisper-large-v3-turbo",
             extra_fields: &[],
+            skip_auth: false,
         }),
         "siliconflow" => make(WhisperCompatConfig {
             provider_name: "SiliconFlow",
             endpoint: "https://api.siliconflow.cn/v1/audio/transcriptions",
             model: "FunAudioLLM/SenseVoiceSmall",
             extra_fields: &[],
+            skip_auth: false,
+        }),
+        "local-whisper" => make(WhisperCompatConfig {
+            provider_name: "Local Whisper",
+            endpoint: "http://127.0.0.1:8800/v1/audio/transcriptions",
+            model: "whisper-1",
+            extra_fields: &[],
+            skip_auth: true,
         }),
         _ => make(WhisperCompatConfig {
             provider_name: "GLM-ASR",
             endpoint: "https://open.bigmodel.cn/api/paas/v4/audio/transcriptions",
             model: "glm-asr-2512",
             extra_fields: &[("stream", "false")],
+            skip_auth: false,
         }),
     }
 }

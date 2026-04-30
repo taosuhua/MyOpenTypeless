@@ -25,6 +25,7 @@ export const PRO_PLAN = {
 } as const
 
 export const STT_PROVIDERS = [
+  { value: 'local-whisper', label: 'Local Whisper (本地)' },
   { value: 'deepgram', label: 'Deepgram Nova-3' },
   { value: 'assemblyai', label: 'AssemblyAI' },
   { value: 'glm-asr', label: 'GLM-ASR (智谱)' },
@@ -69,7 +70,7 @@ export const LLM_DEFAULT_CONFIG: Record<string, { baseUrl: string; model: string
 
 export const LANGUAGES = [
   { value: 'multi', label: 'Auto Detect' },
-  { value: 'zh', label: '中文 (Chinese)' },
+  { value: 'zh', label: '简体中文 (Simplified Chinese)' },
   { value: 'en', label: 'English' },
   { value: 'ja', label: '日本語 (Japanese)' },
   { value: 'ko', label: '한국어 (Korean)' },
@@ -93,7 +94,7 @@ export const LANGUAGES = [
 
 export const TARGET_LANGUAGES = [
   { value: 'en', label: 'English' },
-  { value: 'zh', label: '中文 (Chinese)' },
+  { value: 'zh', label: '简体中文 (Simplified Chinese)' },
   { value: 'ja', label: '日本語 (Japanese)' },
   { value: 'ko', label: '한국어 (Korean)' },
   { value: 'fr', label: 'Français (French)' },

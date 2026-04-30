@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm --version)",
+      "Bash(rustc --version)",
+      "Bash(cargo --version)",
+      "Bash(git --version)",
+      "Bash(where rustc:*)",
+      "Bash(where cargo:*)"
+    ]
+  }
+}

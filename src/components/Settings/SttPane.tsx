@@ -17,6 +17,7 @@ export function SttPane() {
   const { t } = useTranslation()
 
   const isCloud = config.stt_provider === 'cloud'
+  const isLocalWhisper = config.stt_provider === 'local-whisper'
 
   const handleTest = async () => {
     setSttTestStatus('testing')
@@ -65,6 +66,33 @@ export function SttPane() {
           ) : (
             <p className="text-[12px] text-green-500">{t('settings.sttProActive')}</p>
           )}
+        </div>
+      ) : isLocalWhisper ? (
+        <div>
+          <div className="flex gap-2">
+            <button
+              onClick={handleTest}
+              disabled={sttTestStatus === 'testing'}
+              className="px-4 py-2.5 bg-accent text-white rounded-[10px] text-[13px] border-none cursor-pointer hover:bg-accent-hover disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5"
+            >
+              {sttTestStatus === 'testing' && <Loader2 size={14} className="animate-spin" />}
+              {t('settings.test')}
+            </button>
+          </div>
+          {sttTestStatus === 'success' && (
+            <p className="flex items-center gap-1 text-[12px] text-success mt-2">
+              <CheckCircle2 size={13} />{' '}
+              {sttLatencyMs !== null ? `${sttLatencyMs}ms` : t('settings.connectionSuccess')}
+            </p>
+          )}
+          {sttTestStatus === 'error' && (
+            <p className="flex items-center gap-1 text-[12px] text-error mt-2">
+              <XCircle size={13} /> {t('settings.connectionFailed')}
+            </p>
+          )}
+          <p className="text-[11px] text-text-tertiary mt-1.5">
+            使用本地 Faster Whisper Server (127.0.0.1:8800)，无需 API Key
+          </p>
         </div>
       ) : (
         <FormField label={t('settings.apiKey')}>
