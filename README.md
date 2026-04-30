@@ -1,5 +1,5 @@
 <p align="center">
-  <strong>English</strong> | <a href="README_zh.md">中文</a> | <a href="README_ja.md">日本語</a> | <a href="README_ko.md">한국어</a> | <a href="README_es.md">Español</a> | <a href="README_fr.md">Français</a> | <a href="README_de.md">Deutsch</a> | <a href="README_pt.md">Português</a> | <a href="README_ru.md">Русский</a> | <a href="README_ar.md">العربية</a> | <a href="README_hi.md">हिन्दी</a> | <a href="README_it.md">Italiano</a> | <a href="README_tr.md">Türkçe</a> | <a href="README_vi.md">Tiếng Việt</a> | <a href="README_th.md">ภาษาไทย</a> | <a href="README_id.md">Bahasa Indonesia</a> | <a href="README_pl.md">Polski</a> | <a href="README_nl.md">Nederlands</a>
+  <strong>中文</strong> | <a href="README_EN.md">English</a> | <a href="README_ja.md">日本語</a> | <a href="README_ko.md">한국어</a>
 </p>
 
 <p align="center">
@@ -9,242 +9,167 @@
 <h1 align="center">OpenTypeless</h1>
 
 <p align="center">
-  Open-source AI voice input for desktop. Speak naturally, get polished text in any app.
+  开源桌面端 AI 语音输入工具。自然说话，在任意应用中获得润色后的文本。
 </p>
 
 <p align="center">
-  Whether you're writing emails, coding, chatting, or taking notes — just press a hotkey,<br/>
-  speak your mind, and OpenTypeless transcribes and polishes your words with AI,<br/>
-  then types them directly into whatever app you're using.
+  无论你在写邮件、写代码、聊天还是做笔记 — 只需按下热键，<br/>
+  说出你的想法，OpenTypeless 会用 AI 转录并润色你的语音，<br/>
+  然后直接输入到你正在使用的任何应用中。
 </p>
-
-<p align="center">
-  <a href="https://github.com/tover0314-w/opentypeless/actions/workflows/ci.yml"><img src="https://github.com/tover0314-w/opentypeless/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
-  <a href="https://github.com/tover0314-w/opentypeless/releases"><img src="https://img.shields.io/github/v/release/tover0314-w/opentypeless?color=2ABBA7" alt="Release" /></a>
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/tover0314-w/opentypeless" alt="License" /></a>
-  <a href="https://github.com/tover0314-w/opentypeless/stargazers"><img src="https://img.shields.io/github/stars/tover0314-w/opentypeless?style=social" alt="Stars" /></a>
-  <a href="https://discord.gg/V6rRpJ4RGD"><img src="https://img.shields.io/badge/Discord-Join%20us-5865F2?logo=discord&logoColor=white" alt="Discord" /></a>
-</p>
-
-<p align="center">
-  <img src="docs/images/demo.gif" width="720" alt="OpenTypeless Demo" />
-</p>
-
-<details>
-<summary>More screenshots</summary>
-
-<p align="center">
-  <img src="docs/images/app-main-light.png" width="720" alt="OpenTypeless Main Window" />
-</p>
-
-| Settings | History |
-|---|---|
-| <img src="docs/images/app-settings.png" width="360" /> | <img src="docs/images/app-history.png" width="360" /> |
-
-</details>
 
 ---
 
-## Why OpenTypeless?
+## 安装与配置指南
 
-| | OpenTypeless | macOS Dictation | Windows Voice Typing | Whisper Desktop |
-|---|---|---|---|---|
-| AI text polishing | ✅ Multiple LLMs | ❌ | ❌ | ❌ |
-| STT provider choice | ✅ 6+ providers | ❌ Apple only | ❌ Microsoft only | ❌ Whisper only |
-| Works in any app | ✅ | ✅ | ✅ | ❌ Copy-paste |
-| Translation mode | ✅ | ❌ | ❌ | ❌ |
-| Open source | ✅ MIT | ❌ | ❌ | ✅ |
-| Cross-platform | ✅ Win/Mac/Linux | ❌ Mac only | ❌ Windows only | ✅ |
-| Custom dictionary | ✅ | ❌ | ❌ | ❌ |
-| Self-hostable | ✅ BYOK | ❌ | ❌ | ✅ |
+### 方式一：使用本地 Whisper（推荐，免费且隐私）
 
-## Features
+本方式使用本地 GPU 加速的 Whisper 模型，无需 API 密钥，完全免费，且语音数据不会上传到任何服务器。
 
-- 🎙️ Global hotkey recording — hold-to-record or toggle mode
-- 💊 Floating capsule widget that stays on top
-- 🗣️ 6+ STT providers: Deepgram, AssemblyAI, Whisper, Groq, GLM-ASR, SiliconFlow
-- 🤖 Text polishing via multiple LLMs: OpenAI, DeepSeek, Claude, Gemini, Ollama, and more
-- ⚡ Streaming output — text appears as the LLM generates it
-- ⌨️ Keyboard simulation or clipboard output
-- 📝 Highlight text before recording to give the LLM context
-- 🌐 Translation mode: speak in one language, output in another (20+ languages)
-- 📖 Custom dictionary for domain-specific terms
-- 🔍 Per-app detection to adapt formatting
-- 📜 Local history with full-text search
-- 🌗 Dark / light / system theme
-- 🚀 Auto-start on login
+#### 1. 安装 Python
 
-> [!TIP]
-> **Recommended Configuration for Best Experience**
->
-> | | Provider | Model |
-> |---|---|---|
-> | 🗣️ STT | Groq | `whisper-large-v3-turbo` |
-> | 🤖 AI Polish | Google | `gemini-2.5-flash` |
->
-> This combo delivers fast, accurate transcription with high-quality text polishing — and both offer generous free tiers.
+从 [Python 官网](https://www.python.org/downloads/) 下载 Python 3.11 或更高版本。
 
-## Download
+安装时**务必勾选** "Add Python to PATH"。
 
-Download the latest version for your platform:
+#### 2. 安装 faster-whisper-server
 
-**[Download from Releases](https://github.com/tover0314-w/opentypeless/releases)**
-
-| Platform | File |
-|----------|------|
-| Windows | `.msi` installer |
-| macOS (Apple Silicon) | `.dmg` |
-| macOS (Intel) | `.dmg` |
-| Linux | `.AppImage` / `.deb` |
-
-## Prerequisites
-
-- [Node.js](https://nodejs.org/) 20+
-- [Rust](https://rustup.rs/) (stable toolchain)
-- Platform-specific dependencies for Tauri: see [Tauri Prerequisites](https://v2.tauri.app/start/prerequisites/)
-
-## Getting Started
+打开命令提示符或 PowerShell，运行：
 
 ```bash
-# Install dependencies
+pip install faster-whisper-server
+```
+
+#### 3. 安装 CUDA（可选，用于 GPU 加速）
+
+如果你有 NVIDIA 显卡，安装 CUDA Toolkit 可大幅提升转录速度：
+
+- 从 [NVIDIA CUDA Downloads](https://developer.nvidia.com/cuda-downloads) 下载 CUDA 12.x 版本
+- 安装到默认位置即可
+
+**注意**：GTX 1660 Ti 及以上显卡支持 CUDA。若无显卡或不安装 CUDA，程序会自动使用 CPU 模式（速度较慢）。
+
+#### 4. 安装 OpenTypeless
+
+下载并运行安装包：
+- Windows: `OpenTypeless_0.1.0_x64-setup.exe`（NSIS 安装包）
+- 或 `OpenTypeless_0.1.0_x64_en-US.msi`
+
+#### 5. 配置 Local Whisper
+
+打开 OpenTypeless，进入设置：
+
+1. **语音识别（STT）设置**：
+   - 选择 `Local Whisper (本地)`
+   - 无需填写 API 密钥
+
+2. **AI 润色（LLM）设置**：
+   - 选择任意 LLM 服务商（如 OpenRouter、DeepSeek 等）
+   - 输入对应的 API 密钥
+   - 或选择 `OpenTypeless Cloud` 使用云端服务
+
+3. **通用设置**：
+   - 设置热键（默认 `Ctrl+/`）
+   - 选择输出模式：键盘模拟或剪贴板
+
+#### 6. 开始使用
+
+- 按下热键开始录音
+- 说话（支持中英文混合）
+- 松开热键，等待转录和润色
+- 文本自动输入到当前应用
+
+---
+
+### 方式二：使用云端 STT 服务
+
+如果不想本地部署，可选择以下云端语音识别服务商：
+
+| 服务商 | 特点 | 获取 API 密钥 |
+|--------|------|---------------|
+| Groq Whisper | 免费，速度快 | [Groq Console](https://console.groq.com/) |
+| GLM-ASR（智谱） | 中文效果好 | [智谱开放平台](https://open.bigmodel.cn/) |
+| Deepgram | 高准确率 | [Deepgram](https://console.deepgram.com/) |
+| SiliconFlow（硅基流动） | 国内访问快 | [SiliconFlow](https://cloud.siliconflow.cn/) |
+| OpenAI Whisper | 稳定可靠 | [OpenAI](https://platform.openai.com/) |
+
+配置方法：在设置中选择对应服务商，输入 API 密钥即可。
+
+---
+
+### AI 润色服务商选择
+
+| 服务商 | 推荐模型 | 特点 | 获取 API 密钥 |
+|--------|----------|------|---------------|
+| OpenRouter | `google/gemini-2.5-flash` | 免费，速度快 | [OpenRouter](https://openrouter.ai/) |
+| DeepSeek | `deepseek-chat` | 中文效果好，便宜 | [DeepSeek](https://platform.deepseek.com/) |
+| 智谱（Zhipu） | `glm-4-flash` | 中文效果好 | [智谱开放平台](https://open.bigmodel.cn/) |
+| OpenAI | `gpt-4o-mini` | 稳定可靠 | [OpenAI](https://platform.openai.com/) |
+
+---
+
+## 功能特性
+
+- 🎙️ 全局热键录音，支持按住和切换两种模式
+- 💊 浮动胶囊悬浮窗，随时可见录音状态
+- 🗣️ 多种语音识别服务商：本地 Whisper、Groq、智谱、Deepgram 等
+- 🤖 多种大模型润色文本：DeepSeek、智谱、OpenAI、Gemini 等
+- ⚡ 流式输出，边生成边打字
+- ⌨️ 支持键盘模拟和剪贴板两种输出方式
+- 🌐 翻译模式：说中文，输出英文（或其他语言）
+- 📖 自定义词典，提升专业术语识别率
+- 🔍 自动识别当前应用，适配不同场景
+- 📜 本地历史记录，支持全文搜索
+- 🌗 深色 / 浅色 / 跟随系统主题
+- 🚀 开机自启
+
+---
+
+## 常见问题
+
+### 为什么输出是繁体中文？
+
+请确保在设置中选择了"简体中文"作为目标语言。如果仍有问题，请检查 LLM 服务商的模型是否正确配置。
+
+### 转录速度慢怎么办？
+
+1. 确保已安装 CUDA 并正确配置
+2. 检查 GPU 是否被正确使用（任务管理器中查看 GPU 使用率）
+3. 如果使用 CPU，转录速度会较慢（约 5-7 秒）
+4. GPU 加速下，转录速度约 1-2 秒
+
+### 在新电脑上如何部署？
+
+1. 安装 Python 3.11+（勾选 "Add Python to PATH")
+2. `pip install faster-whisper-server`
+3. 安装 CUDA（可选，用于 GPU 加速）
+4. 安装 OpenTypeless
+
+程序会自动检测 Python 和 CUDA 路径，无需手动配置。
+
+### 可以完全离线使用吗？
+
+可以。使用本地 Whisper + 本地 LLM（如 Ollama），程序可完全离线运行。
+
+---
+
+## 从源码构建
+
+```bash
+# 安装依赖
 npm install
 
-# Run in development mode
+# 开发模式运行
 npm run tauri dev
 
-# Build for production
+# 构建生产版本
 npm run tauri build
 ```
 
-The built application will be in `src-tauri/target/release/bundle/`.
+构建产物位于 `src-tauri/target/release/bundle/`。
 
-## Configuration
+---
 
-All settings are accessible from the in-app Settings panel:
-
-- **Speech Recognition** — choose STT provider and enter your API key
-- **AI Polish** — choose LLM provider, model, and API key
-- **General** — hotkey, output mode, theme, auto-start
-- **Dictionary** — add custom terms for better transcription accuracy
-- **Scenes** — prompt templates for different use cases
-
-API keys are stored locally via `tauri-plugin-store`. No keys are sent to OpenTypeless servers — all STT/LLM requests go directly to the provider you configure.
-
-### Cloud (Pro) Option
-
-OpenTypeless also offers an optional Pro subscription that provides managed STT and LLM quota so you don't need your own API keys. This is entirely optional — the app is fully functional with your own keys.
-
-[Learn more about Pro](https://www.opentypeless.com)
-
-### BYOK (Bring Your Own Key) vs Cloud
-
-| | BYOK Mode | Cloud (Pro) Mode |
-|---|---|---|
-| STT | Your own API key (Deepgram, AssemblyAI, etc.) | Managed quota (10h/month) |
-| LLM | Your own API key (OpenAI, DeepSeek, etc.) | Managed quota (~5M tokens/month) |
-| Cloud dependency | None — all requests go directly to your provider | Requires connection to www.opentypeless.com |
-| Cost | Pay your provider directly | $4.99/month subscription |
-
-All core features — recording, transcription, AI polish, keyboard/clipboard output, dictionary, history — work entirely offline from OpenTypeless servers in BYOK mode.
-
-### Self-Hosting / No Cloud
-
-To run OpenTypeless without any cloud dependency:
-
-1. Choose any non-Cloud STT and LLM provider in Settings
-2. Enter your own API keys
-3. That's it — no account or internet connection to www.opentypeless.com is needed
-
-If you want to point the optional cloud features at your own backend, set these environment variables before building:
-
-| Variable | Default | Description |
-|---|---|---|
-| `VITE_API_BASE_URL` | `https://www.opentypeless.com` | Frontend cloud API base URL |
-| `API_BASE_URL` | `https://www.opentypeless.com` | Rust backend cloud API base URL |
-
-```bash
-# Example: build with a custom backend
-VITE_API_BASE_URL=https://my-server.example.com API_BASE_URL=https://my-server.example.com npm run tauri build
-```
-
-## Architecture
-
-**Data Flow Pipeline:**
-
-```
-Microphone → Audio Capture → STT Provider → Raw Transcript → LLM Polish → Keyboard/Clipboard Output
-```
-
-```
-src/                  # React frontend (TypeScript)
-├── components/       # UI components (Settings, History, Capsule, etc.)
-├── hooks/            # React hooks (recording, theme, Tauri events)
-├── lib/              # Utilities (API client, router, constants)
-└── stores/           # Zustand state management
-
-src-tauri/src/        # Rust backend
-├── audio/            # Audio capture via cpal
-├── stt/              # STT providers (Deepgram, AssemblyAI, Whisper-compat, Cloud)
-├── llm/              # LLM providers (OpenAI-compat, Cloud)
-├── output/           # Text output (keyboard simulation, clipboard paste)
-├── storage/          # Config (tauri-plugin-store) + history/dictionary (SQLite)
-├── app_detector/     # Detect active application for context
-├── pipeline.rs       # Recording → STT → LLM → Output orchestration
-└── lib.rs            # Tauri app setup, commands, hotkey handling
-```
-
-## Roadmap
-
-- [ ] Plugin system for custom STT/LLM integrations
-- [ ] Improved multi-language STT accuracy and dialect support
-- [ ] Voice commands (e.g. "delete last sentence")
-- [ ] Customizable hotkey combinations
-- [ ] Improved onboarding experience
-- [ ] Mobile companion app
-
-## FAQ
-
-**Is my audio sent to the cloud?**
-In BYOK mode, audio goes directly to your chosen STT provider (e.g., Groq, Deepgram). Nothing passes through OpenTypeless servers. In Cloud (Pro) mode, audio is sent to our managed proxy for transcription.
-
-**Can I use it offline?**
-With a local STT provider (Whisper via Ollama) and a local LLM (Ollama), the app works entirely offline. No internet connection needed.
-
-**Which languages are supported?**
-STT supports 99+ languages depending on the provider. AI polish and translation support 20+ target languages.
-
-**Is the app free?**
-Yes. The app is fully functional with your own API keys (BYOK). The Cloud Pro subscription ($4.99/month) is optional.
-
-## Community
-
-- 💬 [Discord](https://discord.gg/V6rRpJ4RGD) — Chat, get help, share feedback
-- 🗣️ [GitHub Discussions](https://github.com/tover0314-w/opentypeless/discussions) — Feature proposals, Q&A
-- 🐛 [Issue Tracker](https://github.com/tover0314-w/opentypeless/issues) — Bug reports and feature requests
-- 📖 [Contributing Guide](CONTRIBUTING.md) — Development setup and guidelines
-- 🔒 [Security Policy](SECURITY.md) — Report vulnerabilities responsibly
-- 🧭 [Vision](VISION.md) — Project principles and roadmap direction
-
-## Contributing
-
-Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and guidelines.
-
-Looking for a place to start? Check out issues labeled [`good first issue`](https://github.com/tover0314-w/opentypeless/labels/good%20first%20issue).
-
-## Star History
-
-<a href="https://star-history.com/#tover0314-w/opentypeless&Date">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=tover0314-w/opentypeless&type=Date&theme=dark" />
-    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=tover0314-w/opentypeless&type=Date" />
-    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=tover0314-w/opentypeless&type=Date" />
-  </picture>
-</a>
-
-## Built with Claude Code
-
-This entire project was built in a single day using [Claude Code](https://claude.com/claude-code) — from architecture design to full implementation, including the Tauri backend, React frontend, CI/CD pipeline, and this README.
-
-## License
+## 许可证
 
 [MIT](LICENSE)
