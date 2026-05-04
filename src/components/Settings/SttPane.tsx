@@ -17,7 +17,7 @@ export function SttPane() {
   const { t } = useTranslation()
 
   const isCloud = config.stt_provider === 'cloud'
-  const isLocalWhisper = config.stt_provider === 'local-whisper'
+  const isLocalWhisper = config.stt_provider === 'local-whisper' || config.stt_provider === 'local-qwen'
 
   const handleTest = async () => {
     setSttTestStatus('testing')

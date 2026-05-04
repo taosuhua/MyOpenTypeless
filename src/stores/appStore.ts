@@ -4,6 +4,7 @@ export type PipelineState = 'idle' | 'recording' | 'transcribing' | 'polishing' 
 
 export type SttProvider =
   | 'local-whisper'
+  | 'local-qwen'
   | 'deepgram'
   | 'assemblyai'
   | 'glm-asr'

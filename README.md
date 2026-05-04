@@ -40,7 +40,17 @@
 pip install faster-whisper-server
 ```
 
-#### 3. 安装 CUDA（可选，用于 GPU 加速）
+#### 3. 安装 Qwen3-ASR（可选，另一个本地模型）
+
+Qwen3-ASR 是阿里巴巴开发的语音识别模型，转录速度更快：
+
+```bash
+pip install qwen-asr
+```
+
+模型会在首次使用时自动下载（约 4.7GB）。
+
+#### 4. 安装 CUDA（可选，用于 GPU 加速）
 
 如果你有 NVIDIA 显卡，安装 CUDA Toolkit 可大幅提升转录速度：
 
@@ -49,19 +59,28 @@ pip install faster-whisper-server
 
 **注意**：GTX 1660 Ti 及以上显卡支持 CUDA。若无显卡或不安装 CUDA，程序会自动使用 CPU 模式（速度较慢）。
 
-#### 4. 安装 OpenTypeless
+#### 5. 安装 OpenTypeless
 
 下载并运行安装包：
 - Windows: `OpenTypeless_0.1.0_x64-setup.exe`（NSIS 安装包）
 - 或 `OpenTypeless_0.1.0_x64_en-US.msi`
 
-#### 5. 配置 Local Whisper
+#### 6. 配置本地语音识别
 
 打开 OpenTypeless，进入设置：
 
 1. **语音识别（STT）设置**：
-   - 选择 `Local Whisper (本地)`
+   - 选择 `Local Whisper (本地)` 或 `Local Qwen3-ASR (本地)`
    - 无需填写 API 密钥
+
+**两个本地模型的对比**：
+
+| 模型 | 显存占用 | 转录速度 | 中文效果 |
+|------|----------|----------|----------|
+| Local Whisper (medium) | ~2GB | ~1.9秒 | 良好 |
+| Local Qwen3-ASR (1.7B) | ~4GB | ~0.9秒 | 优秀 |
+
+**注意**：由于显存限制，GTX 1660 Ti（6GB）只能同时运行一个本地模型。如果需要切换，请关闭另一个服务。
 
 2. **AI 润色（LLM）设置**：
    - 选择任意 LLM 服务商（如 OpenRouter、DeepSeek 等）
@@ -72,7 +91,7 @@ pip install faster-whisper-server
    - 设置热键（默认 `Ctrl+/`）
    - 选择输出模式：键盘模拟或剪贴板
 
-#### 6. 开始使用
+#### 7. 开始使用
 
 - 按下热键开始录音
 - 说话（支持中英文混合）

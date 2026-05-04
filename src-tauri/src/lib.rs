@@ -326,6 +326,150 @@ models:
     None
 }
 
+/// Spawn the local Qwen3-ASR Server in the background if it's not already running.
+async fn spawn_local_qwen_server() {
+    let health_url = "http://127.0.0.1:8801/health";
+    // Check if already running
+    if let Ok(resp) = reqwest::Client::new()
+        .get(health_url)
+        .timeout(std::time::Duration::from_secs(2))
+        .send()
+        .await
+    {
+        if resp.status().is_success() {
+            tracing::info!("Local Qwen3-ASR Server already running, skipping spawn");
+            return;
+        }
+    }
+
+    tracing::info!("Starting local Qwen3-ASR Server ...");
+
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        // CREATE_NO_WINDOW = 0x08000000
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+
+        // Find Python executable
+        let python_path = find_python_on_windows();
+        if python_path.is_none() {
+            tracing::error!("Python not found. Please install Python 3.11+ and qwen-asr");
+            return;
+        }
+        let python_path = python_path.unwrap();
+        tracing::info!("Using Python: {}", python_path);
+
+        // Find the qwen_asr_server.py script path
+        // It should be in the same directory as the app or in a known location
+        let script_paths = [
+            "qwen_asr_server.py",  // Current directory
+            "D:\\Documents\\OpenTypeless\\qwen_asr_server.py",  // Development path
+        ];
+
+        let script_path = script_paths
+            .iter()
+            .find(|p| std::path::Path::new(p).exists())
+            .map(|p| p.to_string())
+            .or_else(|| {
+                // Try to find in the app data directory
+                None
+            });
+
+        if script_path.is_none() {
+            tracing::error!("qwen_asr_server.py not found");
+            return;
+        }
+
+        // Build environment with current env + CUDA paths
+        let mut env: std::collections::HashMap<String, String> = std::env::vars().collect();
+
+        // Find and add CUDA paths to PATH
+        if let Some(cuda_paths) = find_cuda_paths_on_windows() {
+            if let Some(path) = env.get("PATH") {
+                let mut new_path = path.clone();
+                for cuda_dir in &cuda_paths {
+                    if !path.contains(cuda_dir) {
+                        new_path.push(';');
+                        new_path.push_str(cuda_dir);
+                    }
+                }
+                env.insert("PATH".to_string(), new_path);
+                tracing::info!("Added CUDA paths to PATH");
+            }
+        }
+
+        let result = std::process::Command::new(&python_path)
+            .args([
+                script_path.unwrap().as_str(),
+                "--host",
+                "127.0.0.1",
+                "--port",
+                "8801",
+                "--preload",
+            ])
+            .envs(&env)
+            .creation_flags(CREATE_NO_WINDOW)
+            .spawn();
+
+        match result {
+            Ok(child) => {
+                tracing::info!(
+                    "Local Qwen3-ASR Server spawned (background, pid={})",
+                    child.id()
+                );
+                // Wait for server to be ready
+                for i in 1..=120 {
+                    tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+                    if let Ok(resp) = reqwest::Client::new()
+                        .get(health_url)
+                        .timeout(std::time::Duration::from_secs(2))
+                        .send()
+                        .await
+                    {
+                        if resp.status().is_success() {
+                            tracing::info!(
+                                "Local Qwen3-ASR Server ready after {}s",
+                                i
+                            );
+                            return;
+                        }
+                    }
+                }
+                tracing::warn!("Local Qwen3-ASR Server not ready after 120s");
+            }
+            Err(e) => tracing::error!("Failed to spawn Local Qwen3-ASR Server: {}", e),
+        }
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        // On macOS/Linux, try to find python3 in PATH
+        let python_path = if std::path::Path::new("/usr/bin/python3").exists() {
+            "/usr/bin/python3"
+        } else if std::path::Path::new("/usr/local/bin/python3").exists() {
+            "/usr/local/bin/python3"
+        } else {
+            "python3"
+        };
+
+        let result = std::process::Command::new(python_path)
+            .args([
+                "qwen_asr_server.py",
+                "--host",
+                "127.0.0.1",
+                "--port",
+                "8801",
+                "--preload",
+            ])
+            .spawn();
+
+        match result {
+            Ok(_) => tracing::info!("Local Qwen3-ASR Server spawned (background)"),
+            Err(e) => tracing::error!("Failed to spawn Local Qwen3-ASR Server: {}", e),
+        }
+    }
+}
+
 /// Cached hotkey mode to avoid loading config from disk on every keypress.
 /// Updated whenever config is saved.
 struct HotkeyModeCache(Arc<Mutex<String>>);
@@ -498,7 +642,7 @@ async fn test_stt_connection(
         return Ok(body["plan"].as_str() == Some("pro"));
     }
 
-    if api_key.is_empty() && provider != "local-whisper" {
+    if api_key.is_empty() && provider != "local-whisper" && provider != "local-qwen" {
         return Ok(false);
     }
 
@@ -525,7 +669,7 @@ async fn test_stt_connection(
                 .map_err(|e| e.to_string())?;
             Ok(resp.status().is_success())
         }
-        "glm-asr" | "openai-whisper" | "groq-whisper" | "siliconflow" | "local-whisper" => {
+        "glm-asr" | "openai-whisper" | "groq-whisper" | "siliconflow" | "local-whisper" | "local-qwen" => {
             // All use Whisper-compatible file upload API
             let (endpoint, model, extra_fields, skip_auth): (&str, &str, &[(&str, &str)], bool) =
                 match provider.as_str() {
@@ -550,6 +694,12 @@ async fn test_stt_connection(
                     "local-whisper" => (
                         "http://127.0.0.1:8800/v1/audio/transcriptions",
                         "whisper-1",
+                        &[][..],
+                        true,
+                    ),
+                    "local-qwen" => (
+                        "http://127.0.0.1:8801/v1/audio/transcriptions",
+                        "qwen3-asr-1.7b",
                         &[][..],
                         true,
                     ),
@@ -752,7 +902,7 @@ async fn bench_stt_connection(
         return Ok(elapsed);
     }
 
-    if api_key.is_empty() && provider != "local-whisper" {
+    if api_key.is_empty() && provider != "local-whisper" && provider != "local-qwen" {
         return Err("API key is empty".to_string());
     }
 
@@ -789,7 +939,7 @@ async fn bench_stt_connection(
             }
             Ok(elapsed)
         }
-        "glm-asr" | "openai-whisper" | "groq-whisper" | "siliconflow" | "local-whisper" => {
+        "glm-asr" | "openai-whisper" | "groq-whisper" | "siliconflow" | "local-whisper" | "local-qwen" => {
             let (endpoint, model, extra_fields, skip_auth): (&str, &str, &[(&str, &str)], bool) =
                 match provider.as_str() {
                     "glm-asr" => (
@@ -813,6 +963,12 @@ async fn bench_stt_connection(
                     "local-whisper" => (
                         "http://127.0.0.1:8800/v1/audio/transcriptions",
                         "whisper-1",
+                        &[][..],
+                        true,
+                    ),
+                    "local-qwen" => (
+                        "http://127.0.0.1:8801/v1/audio/transcriptions",
+                        "qwen3-asr-1.7b",
                         &[][..],
                         true,
                     ),
@@ -1412,9 +1568,11 @@ pub fn run() {
                 tauri::async_runtime::block_on(config_manager.load()).unwrap_or_default();
             let shortcut = parse_hotkey(&initial_config.hotkey).unwrap_or_else(default_shortcut);
 
-            // Auto-start Faster Whisper Server if local-whisper is the configured STT provider
+            // Auto-start local STT servers if configured
             if initial_config.stt_provider == "local-whisper" {
                 tauri::async_runtime::spawn(spawn_local_whisper_server());
+            } else if initial_config.stt_provider == "local-qwen" {
+                tauri::async_runtime::spawn(spawn_local_qwen_server());
             }
 
             app.manage(config_manager);

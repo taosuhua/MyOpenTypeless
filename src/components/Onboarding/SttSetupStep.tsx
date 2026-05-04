@@ -19,7 +19,7 @@ export function SttSetupStep() {
     }
   }
 
-  const isLocalWhisper = config.stt_provider === 'local-whisper'
+  const isLocalWhisper = config.stt_provider === 'local-whisper' || config.stt_provider === 'local-qwen'
 
   return (
     <div className="space-y-5">

@@ -26,6 +26,7 @@ export const PRO_PLAN = {
 
 export const STT_PROVIDERS = [
   { value: 'local-whisper', label: 'Local Whisper (本地)' },
+  { value: 'local-qwen', label: 'Local Qwen3-ASR (本地)' },
   { value: 'deepgram', label: 'Deepgram Nova-3' },
   { value: 'assemblyai', label: 'AssemblyAI' },
   { value: 'glm-asr', label: 'GLM-ASR (智谱)' },

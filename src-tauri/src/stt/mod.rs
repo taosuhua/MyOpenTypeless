@@ -104,6 +104,13 @@ pub fn create_provider(
             extra_fields: &[],
             skip_auth: true,
         }),
+        "local-qwen" => make(WhisperCompatConfig {
+            provider_name: "Local Qwen3-ASR",
+            endpoint: "http://127.0.0.1:8801/v1/audio/transcriptions",
+            model: "qwen3-asr-1.7b",
+            extra_fields: &[],
+            skip_auth: true,
+        }),
         _ => make(WhisperCompatConfig {
             provider_name: "GLM-ASR",
             endpoint: "https://open.bigmodel.cn/api/paas/v4/audio/transcriptions",
